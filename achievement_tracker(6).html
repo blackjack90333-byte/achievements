@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Трекер Достижений</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            min-width: 200px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-connect {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-connect:hover {
+            background: #45a049;
+        }
+
+        .btn-connect.active {
+            background: #ff9800;
+            animation: pulse 1s infinite;
+        }
+
+        .btn-export {
+            background: #2196F3;
+            color: white;
+        }
+
+        .btn-export:hover {
+            background: #0b7dda;
+        }
+
+        .btn-import {
+            background: #9C27B0;
+            color: white;
+        }
+
+        .btn-import:hover {
+            background: #7B1FA2;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .workspace-wrapper {
+            position: relative;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: auto;
+            max-height: 80vh;
+        }
+
+        .workspace {
+            position: relative;
+            background: white;
+            min-height: 600px;
+            width: 100%;
+            transition: all 0.3s;
+        }
+
+        .expand-controls {
+            position: fixed;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 1000;
+        }
+
+        .expand-btn {
+            background: white;
+            border: 3px solid #667eea;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .expand-btn:hover {
+            background: #667eea;
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .expand-btn-label {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #arrowCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .achievement {
+            position: absolute;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            cursor: move;
+            user-select: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            min-width: 150px;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .achievement:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .achievement.completed {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+
+        .achievement-text {
+            margin-bottom: 10px;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+
+        .achievement-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .achievement-buttons button {
+            padding: 6px 12px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 70px;
+        }
+
+        .btn-complete {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-complete:hover {
+            background: #45a049;
+        }
+
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #da190b;
+        }
+
+        .info {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .settings-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .settings-panel h3 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 16px;
+        }
+
+        .settings-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .settings-row label {
+            min-width: 120px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .settings-row input {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .btn-sync {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-sync:hover {
+            background: #45a049;
+        }
+
+        .btn-sync:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-indicator.connected {
+            background: #4CAF50;
+        }
+
+        .status-indicator.disconnected {
+            background: #f44336;
+        }
+
+        .arrow {
+            stroke: #667eea;
+            stroke-width: 3;
+            fill: none;
+            marker-end: url(#arrowhead);
+        }
+
+        .arrow.from-completed {
+            stroke: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Мои Достижения</h1>
+        
+        <div class="controls">
+            <div class="input-group">
+                <input type="text" id="achievementInput" placeholder="Введите название достижения...">
+                <button class="btn-add" onclick="addAchievement()">➕ Добавить</button>
+                <button class="btn-connect" id="connectBtn" onclick="toggleConnectMode()">🔗 Соединить</button>
+                <button class="btn-export" onclick="exportToCSV()">💾 Экспорт CSV</button>
+                <button class="btn-import" onclick="document.getElementById('csvFileInput').click()">📂 Импорт CSV</button>
+                <button class="btn-import" onclick="loadFromSheets()">📥 Загрузить из Sheets</button>
+                <input type="file" id="csvFileInput" accept=".csv" style="display: none;" onchange="importFromCSV(event)">
+            </div>
+            <div class="info" id="infoText">
+                Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.
+            </div>
+            
+            <div class="settings-panel">
+                <h3>⚙️ Настройки Google Sheets API</h3>
+                <div class="settings-row">
+                    <label>Client ID:</label>
+                    <input type="text" id="clientId" placeholder="Ваш OAuth 2.0 Client ID">
+                </div>
+                <div class="settings-row">
+                    <label>API ключ:</label>
+                    <input type="text" id="apiKey" placeholder="Ваш Google API ключ (для чтения)">
+                </div>
+                <div class="settings-row">
+                    <label>ID таблицы:</label>
+                    <input type="text" id="spreadsheetId" placeholder="ID из URL таблицы">
+                </div>
+                <div class="settings-row">
+                    <button class="btn-sync" onclick="saveSettings()">💾 Сохранить настройки</button>
+                    <button class="btn-sync" id="authBtn" onclick="authorizeGoogle()" disabled>🔐 Войти в Google</button>
+                    <button class="btn-sync" id="syncBtn" onclick="syncWithSheets()" disabled>🔄 Синхронизация</button>
+                    <span id="connectionStatus"></span>
+                </div>
+                <div style="font-size: 12px; color: #666; margin-top: 10px;">
+                    <a href="#" onclick="toggleInstructions(); return false;" style="color: #667eea;">📖 Как получить Client ID, API ключ и ID таблицы?</a>
+                </div>
+                <div id="instructions" style="display: none; margin-top: 10px; padding: 10px; background: white; border-radius: 8px; font-size: 13px;">
+                    <strong>Инструкция по настройке OAuth 2.0:</strong><br><br>
+                    
+                    <strong>1. Создание проекта в Google Cloud Console:</strong><br>
+                    • Перейдите на <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a><br>
+                    • Создайте новый проект (например, "Achievement Tracker")<br><br>
+                    
+                    <strong>2. Включение Google Sheets API:</strong><br>
+                    • В меню → "API и сервисы" → "Библиотека"<br>
+                    • Найдите "Google Sheets API" и нажмите "Включить"<br><br>
+                    
+                    <strong>3. Создание OAuth 2.0 Client ID:</strong><br>
+                    • Перейдите в "Учетные данные" → "Создать учетные данные" → "Идентификатор клиента OAuth"<br>
+                    • Тип приложения: "Веб-приложение"<br>
+                    • Разрешенные источники JavaScript: добавьте URL этой страницы (например, https://claude.site или file://)<br>
+                    • Разрешенные URI перенаправления: тот же URL<br>
+                    • Скопируйте "Client ID"<br><br>
+                    
+                    <strong>4. Создание API ключа (опционально, для чтения):</strong><br>
+                    • "Создать учетные данные" → "API ключ"<br>
+                    • Скопируйте ключ<br><br>
+                    
+                    <strong>5. Подготовка таблицы:</strong><br>
+                    • Создайте новую Google таблицу<br>
+                    • В URL найдите ID: docs.google.com/spreadsheets/d/<strong>[ВАШ_ID]</strong>/edit<br>
+                    • Таблица будет доступна после авторизации<br><br>
+                    
+                    <strong>6. Вставьте Client ID и ID таблицы выше, нажмите "Сохранить" → "Войти в Google"</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="workspace-wrapper">
+            <div class="workspace" id="workspace">
+                <div class="canvas-container">
+                    <svg id="arrowCanvas">
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#667eea" />
+                            </marker>
+                            <marker id="arrowhead-completed" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#4CAF50" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="expand-controls">
+            <div>
+                <button class="expand-btn" onclick="expandWidth()" title="Расширить в ширину">↔️</button>
+                <div class="expand-btn-label">Ширина</div>
+            </div>
+            <div>
+                <button class="expand-btn" onclick="expandHeight()" title="Расширить в высоту">↕️</button>
+                <div class="expand-btn-label">Высота</div>
+            </div>
+            <div>
+                <button class="expand-btn" onclick="resetSize()" title="Сбросить размер">🔄</button>
+                <div class="expand-btn-label">Сброс</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let achievements = [];
+        let connections = [];
+        let connectMode = false;
+        let firstSelected = null;
+        let draggedElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        let workspaceWidth = 0;
+        let workspaceHeight = 600;
+        
+        // Google Sheets API settings
+        let clientId = '';
+        let apiKey = '';
+        let spreadsheetId = '';
+        let isConnected = false;
+        let accessToken = '';
+        
+        // Google API загрузка
+        function loadGoogleAPI() {
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.async = true;
+            script.defer = true;
+            document.head.appendChild(script);
+        }
+
+        loadGoogleAPI();
+
+        function toggleInstructions() {
+            const instructions = document.getElementById('instructions');
+            instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function saveSettings() {
+            clientId = document.getElementById('clientId').value.trim();
+            apiKey = document.getElementById('apiKey').value.trim();
+            spreadsheetId = document.getElementById('spreadsheetId').value.trim();
+            
+            if (!clientId || !spreadsheetId) {
+                alert('❌ Пожалуйста, заполните Client ID и ID таблицы!');
+                return;
+            }
+            
+            document.getElementById('authBtn').disabled = false;
+            updateConnectionStatus(false, 'Настройки сохранены. Нажмите "Войти в Google"');
+            alert('✅ Настройки сохранены! Теперь нажмите "Войти в Google" для авторизации.');
+        }
+
+        function authorizeGoogle() {
+            if (!clientId) {
+                alert('❌ Сначала сохраните настройки!');
+                return;
+            }
+
+            const client = google.accounts.oauth2.initTokenClient({
+                client_id: clientId,
+                scope: 'https://www.googleapis.com/auth/spreadsheets',
+                callback: (response) => {
+                    if (response.access_token) {
+                        accessToken = response.access_token;
+                        isConnected = true;
+                        updateConnectionStatus(true, 'Авторизован в Google');
+                        document.getElementById('syncBtn').disabled = false;
+                        alert('✅ Успешная авторизация! Теперь можете использовать синхронизацию.');
+                    } else {
+                        alert('❌ Ошибка авторизации');
+                    }
+                },
+            });
+            
+            client.requestAccessToken();
+        }
+
+        function updateConnectionStatus(connected, message) {
+            const status = document.getElementById('connectionStatus');
+            status.innerHTML = `<span class="status-indicator ${connected ? 'connected' : 'disconnected'}"></span>${message}`;
+        }
+
+        async function syncWithSheets() {
+            if (!isConnected || !accessToken) {
+                alert('❌ Сначала войдите в Google!');
+                return;
+            }
+
+            try {
+                // Подготовка данных
+                const values = [
+                    ['ID', 'Текст', 'Позиция X', 'Позиция Y', 'Выполнено']
+                ];
+                
+                achievements.forEach(ach => {
+                    values.push([
+                        ach.id.toString(),
+                        ach.text,
+                        ach.x.toString(),
+                        ach.y.toString(),
+                        ach.completed.toString()
+                    ]);
+                });
+                
+                values.push(['', '', '', '', '']);
+                values.push(['СВЯЗИ', '', '', '', '']);
+                values.push(['От ID', 'К ID', '', '', '']);
+                
+                connections.forEach(conn => {
+                    values.push([
+                        conn.from.toString(),
+                        conn.to.toString(),
+                        '', '', ''
+                    ]);
+                });
+
+                // Очистка листа
+                await fetch(
+                    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:E1000:clear`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                        }
+                    }
+                );
+
+                // Запись данных
+                const response = await fetch(
+                    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:E${values.length}?valueInputOption=RAW`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            values: values
+                        })
+                    }
+                );
+
+                if (response.ok) {
+                    document.getElementById('infoText').textContent = `✅ Синхронизация успешна! Загружено ${achievements.length} достижений и ${connections.length} связей в Google Sheets.`;
+                    setTimeout(() => {
+                        document.getElementById('infoText').textContent = 'Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.';
+                    }, 5000);
+                } else {
+                    const error = await response.json();
+                    alert('❌ Ошибка синхронизации: ' + (error.error?.message || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                alert('❌ Ошибка синхронизации: ' + error.message);
+            }
+        }
+
+        async function loadFromSheets() {
+            if (!isConnected || !accessToken) {
+                alert('❌ Сначала войдите в Google!');
+                return;
+            }
+
+            try {
+                const response = await fetch(
+                    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:E1000`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const values = data.values || [];
+                    
+                    let newAchievements = [];
+                    let newConnections = [];
+                    let readingConnections = false;
+                    
+                    for (let i = 1; i < values.length; i++) {
+                        const row = values[i];
+                        
+                        if (!row || row.length === 0) continue;
+                        
+                        if (row[0] === 'СВЯЗИ') {
+                            readingConnections = false;
+                            continue;
+                        }
+                        
+                        if (row[0] === 'От ID') {
+                            readingConnections = true;
+                            continue;
+                        }
+                        
+                        if (readingConnections) {
+                            if (row[0] && row[1]) {
+                                newConnections.push({
+                                    from: parseInt(row[0]),
+                                    to: parseInt(row[1])
+                                });
+                            }
+                        } else {
+                            if (row[0] && row[1]) {
+                                newAchievements.push({
+                                    id: parseInt(row[0]),
+                                    text: row[1],
+                                    x: parseFloat(row[2] || 0),
+                                    y: parseFloat(row[3] || 0),
+                                    completed: row[4]?.toLowerCase() === 'true'
+                                });
+                            }
+                        }
+                    }
+                    
+                    if (newAchievements.length > 0) {
+                        if (confirm(`Найдено ${newAchievements.length} достижений в Google Sheets. Загрузить их?`)) {
+                            achievements = newAchievements;
+                            connections = newConnections;
+                            renderAchievements();
+                            document.getElementById('infoText').textContent = '✅ Данные загружены из Google Sheets!';
+                            setTimeout(() => {
+                                document.getElementById('infoText').textContent = 'Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.';
+                            }, 5000);
+                        }
+                    } else {
+                        alert('📋 Таблица пуста или данные не найдены.');
+                    }
+                } else {
+                    const error = await response.json();
+                    alert('❌ Ошибка загрузки: ' + (error.error?.message || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                alert('❌ Ошибка загрузки: ' + error.message);
+            }
+        }
+
+        function expandWidth() {
+            workspaceWidth += 500;
+            updateWorkspaceSize();
+        }
+
+        function expandHeight() {
+            workspaceHeight += 400;
+            updateWorkspaceSize();
+        }
+
+        function resetSize() {
+            workspaceWidth = 0;
+            workspaceHeight = 600;
+            updateWorkspaceSize();
+        }
+
+        function updateWorkspaceSize() {
+            const workspace = document.getElementById('workspace');
+            if (workspaceWidth > 0) {
+                workspace.style.width = workspaceWidth + 'px';
+            } else {
+                workspace.style.width = '100%';
+            }
+            workspace.style.minHeight = workspaceHeight + 'px';
+            
+            setTimeout(() => {
+                const svg = document.getElementById('arrowCanvas');
+                svg.style.width = workspace.offsetWidth + 'px';
+                svg.style.height = workspace.offsetHeight + 'px';
+                drawArrows();
+            }, 50);
+        }
+
+        function exportToCSV() {
+            if (achievements.length === 0) {
+                alert('Нет достижений для экспорта!');
+                return;
+            }
+
+            let csvContent = "ID,Текст,Позиция X,Позиция Y,Выполнено\n";
+            
+            achievements.forEach(ach => {
+                const text = '"' + ach.text.replace(/"/g, '""') + '"';
+                csvContent += `${ach.id},${text},${ach.x},${ach.y},${ach.completed}\n`;
+            });
+
+            csvContent += "\n\nСВЯЗИ\nОт ID,К ID\n";
+            connections.forEach(conn => {
+                csvContent += `${conn.from},${conn.to}\n`;
+            });
+
+            const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'мои_достижения_' + new Date().toISOString().split('T')[0] + '.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            document.getElementById('infoText').textContent = '✅ CSV файл успешно экспортирован! Откройте его в Google Sheets.';
+            setTimeout(() => {
+                document.getElementById('infoText').textContent = 'Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.';
+            }, 5000);
+        }
+
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                const nextChar = line[i + 1];
+                
+                if (char === '"' && nextChar === '"') {
+                    current += '"';
+                    i++;
+                } else if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function importFromCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split('\n');
+                    
+                    let newAchievements = [];
+                    let newConnections = [];
+                    let readingConnections = false;
+                    let skipHeader = true;
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        
+                        if (line === '' || line === ',,,,') {
+                            continue;
+                        }
+                        
+                        if (line.includes('СВЯЗИ') || line === 'СВЯЗИ,,,,') {
+                            skipHeader = true;
+                            continue;
+                        }
+                        
+                        if (line.includes('От ID') || line === 'От ID,К ID,,,') {
+                            readingConnections = true;
+                            continue;
+                        }
+                        
+                        if (line.includes('ID,Текст,Позиция')) {
+                            skipHeader = false;
+                            continue;
+                        }
+                        
+                        const parts = parseCSVLine(line);
+                        
+                        if (readingConnections) {
+                            if (parts.length >= 2 && parts[0] && parts[1]) {
+                                const fromId = parseInt(parts[0]);
+                                const toId = parseInt(parts[1]);
+                                if (!isNaN(fromId) && !isNaN(toId)) {
+                                    newConnections.push({
+                                        from: fromId,
+                                        to: toId
+                                    });
+                                }
+                            }
+                        } else if (!skipHeader) {
+                            if (parts.length >= 5 && parts[0]) {
+                                const id = parseInt(parts[0]);
+                                const text = parts[1];
+                                const x = parseFloat(parts[2]);
+                                const y = parseFloat(parts[3]);
+                                const completed = parts[4].toLowerCase() === 'true';
+                                
+                                if (!isNaN(id) && text && !isNaN(x) && !isNaN(y)) {
+                                    newAchievements.push({
+                                        id: id,
+                                        text: text,
+                                        x: x,
+                                        y: y,
+                                        completed: completed
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (newAchievements.length > 0) {
+                        if (confirm(`Найдено ${newAchievements.length} достижений и ${newConnections.length} связей. Заменить текущие данные?`)) {
+                            achievements = newAchievements;
+                            connections = newConnections;
+                            renderAchievements();
+                            document.getElementById('infoText').textContent = `✅ Данные успешно импортированы! Загружено ${newAchievements.length} достижений и ${newConnections.length} связей.`;
+                            setTimeout(() => {
+                                document.getElementById('infoText').textContent = 'Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.';
+                            }, 5000);
+                        }
+                    } else {
+                        alert('Не удалось найти достижения в файле. Проверьте формат CSV.');
+                    }
+                    
+                } catch (error) {
+                    alert('Ошибка при чтении файла: ' + error.message);
+                }
+                
+                event.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function addAchievement() {
+            const input = document.getElementById('achievementInput');
+            const text = input.value.trim();
+            
+            if (!text) return;
+
+            const achievement = {
+                id: Date.now(),
+                text: text,
+                x: Math.random() * (window.innerWidth - 300) + 50,
+                y: Math.random() * 400 + 100,
+                completed: false
+            };
+
+            achievements.push(achievement);
+            input.value = '';
+            renderAchievements();
+        }
+
+        function toggleConnectMode() {
+            connectMode = !connectMode;
+            const btn = document.getElementById('connectBtn');
+            const info = document.getElementById('infoText');
+            
+            if (connectMode) {
+                btn.classList.add('active');
+                btn.textContent = '❌ Отменить';
+                info.textContent = 'Режим соединения: выберите первое достижение, затем второе для создания связи.';
+                firstSelected = null;
+            } else {
+                btn.classList.remove('active');
+                btn.textContent = '🔗 Соединить';
+                info.textContent = 'Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.';
+                firstSelected = null;
+            }
+        }
+
+        function toggleComplete(id) {
+            const achievement = achievements.find(a => a.id === id);
+            if (achievement) {
+                achievement.completed = !achievement.completed;
+                renderAchievements();
+            }
+        }
+
+        function deleteAchievement(id) {
+            achievements = achievements.filter(a => a.id !== id);
+            connections = connections.filter(c => c.from !== id && c.to !== id);
+            renderAchievements();
+        }
+
+        function selectForConnection(id) {
+            if (!connectMode) return;
+
+            if (!firstSelected) {
+                firstSelected = id;
+                document.getElementById('infoText').textContent = `Выбрано первое достижение. Теперь выберите второе для соединения.`;
+            } else if (firstSelected === id) {
+                document.getElementById('infoText').textContent = 'Нельзя соединить достижение с самим собой. Выберите другое.';
+            } else {
+                connections.push({ from: firstSelected, to: id });
+                toggleConnectMode();
+                renderAchievements();
+            }
+        }
+
+        function renderAchievements() {
+            const workspace = document.getElementById('workspace');
+            const existingAchievements = workspace.querySelectorAll('.achievement');
+            existingAchievements.forEach(el => el.remove());
+
+            achievements.forEach(achievement => {
+                const div = document.createElement('div');
+                div.className = `achievement ${achievement.completed ? 'completed' : ''}`;
+                div.style.left = achievement.x + 'px';
+                div.style.top = achievement.y + 'px';
+                div.dataset.id = achievement.id;
+
+                div.innerHTML = `
+                    <div class="achievement-text">${achievement.text}</div>
+                    <div class="achievement-buttons">
+                        <button class="btn-complete" onclick="toggleComplete(${achievement.id})">
+                            ${achievement.completed ? '↩️' : '✓'}
+                        </button>
+                        <button class="btn-delete" onclick="deleteAchievement(${achievement.id})">🗑️</button>
+                    </div>
+                `;
+
+                div.addEventListener('mousedown', startDrag);
+                div.addEventListener('click', (e) => {
+                    if (!e.target.closest('button')) {
+                        selectForConnection(achievement.id);
+                    }
+                });
+
+                workspace.appendChild(div);
+            });
+
+            drawArrows();
+        }
+
+        function startDrag(e) {
+            if (e.target.closest('button')) return;
+            
+            draggedElement = e.currentTarget;
+            const rect = draggedElement.getBoundingClientRect();
+            const workspaceRect = document.getElementById('workspace').getBoundingClientRect();
+            
+            offsetX = e.clientX - rect.left;
+            offsetY = e.clientY - rect.top;
+
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        }
+
+        function drag(e) {
+            if (!draggedElement) return;
+
+            const workspaceRect = document.getElementById('workspace').getBoundingClientRect();
+            let newX = e.clientX - workspaceRect.left - offsetX;
+            let newY = e.clientY - workspaceRect.top - offsetY;
+
+            newX = Math.max(0, Math.min(newX, workspaceRect.width - draggedElement.offsetWidth));
+            newY = Math.max(0, Math.min(newY, workspaceRect.height - draggedElement.offsetHeight));
+
+            draggedElement.style.left = newX + 'px';
+            draggedElement.style.top = newY + 'px';
+
+            const id = parseInt(draggedElement.dataset.id);
+            const achievement = achievements.find(a => a.id === id);
+            if (achievement) {
+                achievement.x = newX;
+                achievement.y = newY;
+            }
+
+            drawArrows();
+        }
+
+        function stopDrag() {
+            draggedElement = null;
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        function drawArrows() {
+            const svg = document.getElementById('arrowCanvas');
+            svg.querySelectorAll('.arrow').forEach(el => el.remove());
+
+            connections.forEach(conn => {
+                const fromAch = achievements.find(a => a.id === conn.from);
+                const toAch = achievements.find(a => a.id === conn.to);
+
+                if (!fromAch || !toAch) return;
+
+                const fromEl = document.querySelector(`[data-id="${conn.from}"]`);
+                const toEl = document.querySelector(`[data-id="${conn.to}"]`);
+
+                if (!fromEl || !toEl) return;
+
+                const fromRect = fromEl.getBoundingClientRect();
+                const toRect = toEl.getBoundingClientRect();
+                const workspaceRect = document.getElementById('workspace').getBoundingClientRect();
+
+                const x1 = fromRect.left + fromRect.width / 2 - workspaceRect.left;
+                const y1 = fromRect.top + fromRect.height / 2 - workspaceRect.top;
+                const x2 = toRect.left + toRect.width / 2 - workspaceRect.left;
+                const y2 = toRect.top + toRect.height / 2 - workspaceRect.top;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const curve = Math.abs(dx) * 0.3;
+
+                const d = `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`;
+                path.setAttribute('d', d);
+                path.setAttribute('class', `arrow ${fromAch.completed ? 'from-completed' : ''}`);
+                path.setAttribute('marker-end', fromAch.completed ? 'url(#arrowhead-completed)' : 'url(#arrowhead)');
+
+                svg.appendChild(path);
+            });
+        }
+
+        document.getElementById('achievementInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addAchievement();
+        });
+
+        window.addEventListener('resize', () => {
+            drawArrows();
+        });
+
+        updateWorkspaceSize();
+    </script>
+</body>
+</html>
