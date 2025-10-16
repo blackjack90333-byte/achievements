@@ -389,23 +389,39 @@
                     • В меню → "API и сервисы" → "Библиотека"<br>
                     • Найдите "Google Sheets API" и нажмите "Включить"<br><br>
                     
-                    <strong>3. Создание OAuth 2.0 Client ID:</strong><br>
-                    • Перейдите в "Учетные данные" → "Создать учетные данные" → "Идентификатор клиента OAuth"<br>
-                    • Тип приложения: "Веб-приложение"<br>
-                    • Разрешенные источники JavaScript: добавьте URL этой страницы (например, https://claude.site или file://)<br>
-                    • Разрешенные URI перенаправления: тот же URL<br>
-                    • Скопируйте "Client ID"<br><br>
+                    <strong>3. Настройка экрана запроса доступа OAuth:</strong><br>
+                    • "API и сервисы" → "Экран запроса доступа OAuth"<br>
+                    • Тип пользователя: "Внешние" → Создать<br>
+                    • Заполните только обязательные поля (название приложения, email)<br>
+                    • Сохраните и продолжите<br><br>
                     
-                    <strong>4. Создание API ключа (опционально, для чтения):</strong><br>
-                    • "Создать учетные данные" → "API ключ"<br>
-                    • Скопируйте ключ<br><br>
+                    <strong>4. Создание OAuth 2.0 Client ID:</strong><br>
+                    • "Учетные данные" → "Создать учетные данные" → "Идентификатор клиента OAuth"<br>
+                    • Тип: "Веб-приложение"<br>
+                    • Название: любое (например, "Web client")<br>
+                    • <strong>ВАЖНО!</strong> В "Разрешенные источники JavaScript" добавьте:<br>
+                    <div style="background: #f0f0f0; padding: 8px; margin: 5px 0; border-radius: 4px; font-family: monospace;">
+                    <strong>Если открываете локально (файл HTML):</strong><br>
+                    • Оставьте поле пустым ИЛИ добавьте: https://claude.site<br><br>
+                    <strong>Если на хостинге:</strong><br>
+                    • Ваш точный URL (например: https://mysite.com)
+                    </div>
+                    • Разрешенные URI перенаправления можно оставить пустыми для GIS<br>
+                    • Создать → Скопируйте "Client ID"<br><br>
                     
                     <strong>5. Подготовка таблицы:</strong><br>
                     • Создайте новую Google таблицу<br>
-                    • В URL найдите ID: docs.google.com/spreadsheets/d/<strong>[ВАШ_ID]</strong>/edit<br>
-                    • Таблица будет доступна после авторизации<br><br>
+                    • В URL найдите ID: docs.google.com/spreadsheets/d/<strong>[ВАШ_ID]</strong>/edit<br><br>
                     
-                    <strong>6. Вставьте Client ID и ID таблицы выше, нажмите "Сохранить" → "Войти в Google"</strong>
+                    <strong>6. Использование:</strong><br>
+                    • Вставьте Client ID и ID таблицы выше<br>
+                    • Нажмите "Сохранить настройки"<br>
+                    • Нажмите "Войти в Google" и разрешите доступ<br><br>
+                    
+                    <strong>⚠️ Если появляется ошибка 400:</strong><br>
+                    • Проверьте, что в "Разрешенных источниках" указан правильный URL<br>
+                    • Для локальных файлов попробуйте оставить поле пустым<br>
+                    • Подождите 5 минут после изменения настроек OAuth
                 </div>
             </div>
         </div>
@@ -498,23 +514,126 @@
                 return;
             }
 
-            const client = google.accounts.oauth2.initTokenClient({
-                client_id: clientId,
-                scope: 'https://www.googleapis.com/auth/spreadsheets',
-                callback: (response) => {
-                    if (response.access_token) {
-                        accessToken = response.access_token;
-                        isConnected = true;
-                        updateConnectionStatus(true, 'Авторизован в Google');
-                        document.getElementById('syncBtn').disabled = false;
-                        alert('✅ Успешная авторизация! Теперь можете использовать синхронизацию.');
-                    } else {
-                        alert('❌ Ошибка авторизации');
+            try {
+                const client = google.accounts.oauth2.initTokenClient({
+                    client_id: clientId,
+                    scope: 'https://www.googleapis.com/auth/spreadsheets',
+                    callback: async (response) => {
+                        if (response.error) {
+                            alert('❌ Ошибка авторизации: ' + response.error);
+                            console.error('OAuth error:', response);
+                            return;
+                        }
+                        
+                        if (response.access_token) {
+                            accessToken = response.access_token;
+                            isConnected = true;
+                            updateConnectionStatus(true, 'Авторизован в Google');
+                            document.getElementById('syncBtn').disabled = false;
+                            
+                            // Автоматическая загрузка данных после авторизации
+                            document.getElementById('infoText').textContent = '🔄 Загрузка данных из Google Sheets...';
+                            
+                            try {
+                                await loadFromSheetsAuto();
+                            } catch (error) {
+                                console.error('Auto-load error:', error);
+                                // Если таблица пуста или ошибка - просто продолжаем
+                                document.getElementById('infoText').textContent = 'Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.';
+                            }
+                        }
+                    },
+                    error_callback: (error) => {
+                        alert('❌ Ошибка авторизации: ' + JSON.stringify(error));
+                        console.error('OAuth error:', error);
                     }
-                },
-            });
-            
-            client.requestAccessToken();
+                });
+                
+                client.requestAccessToken();
+            } catch (error) {
+                alert('❌ Ошибка при инициализации: ' + error.message + '\n\nУбедитесь, что:\n1. Client ID правильный\n2. Вы добавили текущий URL в OAuth настройках\n3. Текущий URL: ' + window.location.origin);
+                console.error('Authorization error:', error);
+            }
+        }
+
+        async function loadFromSheetsAuto() {
+            try {
+                const response = await fetch(
+                    `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:E1000`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    }
+                );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const values = data.values || [];
+                    
+                    if (values.length <= 1) {
+                        // Таблица пуста или только заголовки
+                        document.getElementById('infoText').textContent = '✅ Авторизация успешна! Таблица пуста. Добавьте достижения и нажмите "Синхронизация" для сохранения.';
+                        return;
+                    }
+                    
+                    let newAchievements = [];
+                    let newConnections = [];
+                    let readingConnections = false;
+                    
+                    for (let i = 1; i < values.length; i++) {
+                        const row = values[i];
+                        
+                        if (!row || row.length === 0) continue;
+                        
+                        if (row[0] === 'СВЯЗИ') {
+                            readingConnections = false;
+                            continue;
+                        }
+                        
+                        if (row[0] === 'От ID') {
+                            readingConnections = true;
+                            continue;
+                        }
+                        
+                        if (readingConnections) {
+                            if (row[0] && row[1]) {
+                                newConnections.push({
+                                    from: parseInt(row[0]),
+                                    to: parseInt(row[1])
+                                });
+                            }
+                        } else {
+                            if (row[0] && row[1]) {
+                                newAchievements.push({
+                                    id: parseInt(row[0]),
+                                    text: row[1],
+                                    x: parseFloat(row[2] || 100),
+                                    y: parseFloat(row[3] || 100),
+                                    completed: row[4]?.toLowerCase() === 'true'
+                                });
+                            }
+                        }
+                    }
+                    
+                    if (newAchievements.length > 0) {
+                        achievements = newAchievements;
+                        connections = newConnections;
+                        renderAchievements();
+                        document.getElementById('infoText').textContent = `✅ Загружено ${newAchievements.length} достижений и ${newConnections.length} связей из Google Sheets!`;
+                        setTimeout(() => {
+                            document.getElementById('infoText').textContent = 'Добавьте достижения и перетаскивайте их мышкой. Нажмите "Соединить", выберите два достижения для создания связи.';
+                        }, 5000);
+                    } else {
+                        document.getElementById('infoText').textContent = '✅ Авторизация успешна! Таблица готова к использованию.';
+                    }
+                } else {
+                    document.getElementById('infoText').textContent = '✅ Авторизация успешна! Теперь можете использовать синхронизацию.';
+                }
+            } catch (error) {
+                console.error('Auto-load error:', error);
+                document.getElementById('infoText').textContent = '✅ Авторизация успешна! Теперь можете использовать синхронизацию.';
+            }
         }
 
         function updateConnectionStatus(connected, message) {
